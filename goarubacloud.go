@@ -1,7 +1,7 @@
 package goarubacloud
 
 import (
-	"github.com/goarubacloud/models"
+	"github.com/arubacloud/goarubacloud/models"
 	"github.com/docker/machine/libmachine/log"
 	"fmt"
 )
