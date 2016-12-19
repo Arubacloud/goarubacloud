@@ -22,3 +22,7 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+cmake-build-debug*
+CMakeLists.txt
+.idea/
