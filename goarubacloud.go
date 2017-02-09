@@ -14,11 +14,13 @@ type SetEnqueueServerCreation struct {
 	Username      string `json:"Username"`
 	Password      string `json:"Password"`
 	Server        struct {
-			      AdministratorPassword string `json:"AdministratorPassword"`
-			      Name                  string `json:"Name"`
-			      SmartVMWarePackageID  int    `json:"SmartVMWarePackageID"`
-			      Note                  string `json:"Note"`
-			      OSTemplateId          int    `json:"OSTemplateId"`
+			      AdministratorPassword 	string `json:"AdministratorPassword"`
+			      Name                  	string `json:"Name"`
+			      SmartVMWarePackageID  	int    `json:"SmartVMWarePackageID"`
+			      Note                  	string `json:"Note"`
+			      OSTemplateId          	int    `json:"OSTemplateId"`
+			      SshKey                	string `json:"SshKey"`
+			      SshPasswordAuthAllowed 	bool        `json:"SshPasswordAuthAllowed,omitempty"`
 		      }
 }
 
@@ -165,7 +167,7 @@ func (a *API) GetServer(serverId int) (server *models.Server, err error) {
 	return server, nil
 }
 
-func (a *API) CreateServer(name, admin_password string, package_id, os_template_id int) (server *models.Server, err error) {
+func (a *API) CreateServer(name, admin_password string, package_id, os_template_id int, sshKey string) (server *models.Server, err error) {
 	var createRequest SetEnqueueServerCreation
 	createRequest.Username = a.client.Username
 	createRequest.Password = a.client.Password
@@ -173,6 +175,8 @@ func (a *API) CreateServer(name, admin_password string, package_id, os_template_
 	createRequest.Server.Name = name
 	createRequest.Server.OSTemplateId = os_template_id
 	createRequest.Server.SmartVMWarePackageID = package_id
+	createRequest.Server.SshKey = sshKey
+	createRequest.Server.SshPasswordAuthAllowed = true
 
 	log.Debug("Post CreateServer Request.")
 	err = a.client.Post("/SetEnqueueServerCreation", createRequest, &server)
