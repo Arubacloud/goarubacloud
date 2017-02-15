@@ -128,7 +128,7 @@ func (a *API) GetTemplate(templatename string) (template *models.Template, err e
 	for _, hv := range templates {
 		if hv.HypervisorType == 4 {
 			for _, template := range hv.Templates {
-				if template.Name == templatename {
+				if template.Name == templatename  && template.TemplateSellingStatus == 1 /*OnSale*/ {
 					return &template, nil
 				}
 			}
@@ -171,12 +171,16 @@ func (a *API) CreateServer(name, admin_password string, package_id, os_template_
 	var createRequest SetEnqueueServerCreation
 	createRequest.Username = a.client.Username
 	createRequest.Password = a.client.Password
-	createRequest.Server.AdministratorPassword = admin_password
 	createRequest.Server.Name = name
 	createRequest.Server.OSTemplateId = os_template_id
 	createRequest.Server.SmartVMWarePackageID = package_id
 	createRequest.Server.SshKey = sshKey
-	createRequest.Server.SshPasswordAuthAllowed = true
+	if len(admin_password) > 0 {
+		createRequest.Server.AdministratorPassword = admin_password
+		createRequest.Server.SshPasswordAuthAllowed = true
+	} else {
+		createRequest.Server.SshPasswordAuthAllowed = true
+	}
 
 	log.Debug("Post CreateServer Request.")
 	err = a.client.Post("/SetEnqueueServerCreation", createRequest, &server)
