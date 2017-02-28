@@ -16,12 +16,31 @@ type SetEnqueueServerCreation struct {
 	Server        struct {
 			      AdministratorPassword 	string `json:"AdministratorPassword"`
 			      Name                  	string `json:"Name"`
-			      SmartVMWarePackageID  	int    `json:"SmartVMWarePackageID"`
+			      SmartVMWarePackageID  	int    `json:"SmartVMWarePackageID,omitempty"`
 			      Note                  	string `json:"Note"`
 			      OSTemplateId          	int    `json:"OSTemplateId"`
 			      SshKey                	string `json:"SshKey"`
 			      SshPasswordAuthAllowed 	bool        `json:"SshPasswordAuthAllowed,omitempty"`
+			      CPUQuantity          	int    `json:"CPUQuantity"`
+			      RAMQuantity          	int    `json:"RAMQuantity"`
+			      NetworkAdaptersConfiguration []NetworkAdapterConfiguration
+			      VirtualDisks []VirtualDiskDetails
 		      }
+}
+
+type NetworkAdapterConfiguration struct{
+	PublicIpAddresses []PublicIpAddressDetails
+	NetworkAdapterType                  	int `json:"NetworkAdapterType"`		      	
+}
+
+type PublicIpAddressDetails struct{
+	PrimaryIPAddress 	bool        `json:"PrimaryIPAddress"`		
+	PublicIpAddressResourceId 	int        `json:"PublicIpAddressResourceId"`	      	
+}
+
+type VirtualDiskDetails struct{
+	Size 	int        `json:"Size,omitempty"`		
+	VirtualDiskType 	int        `json:"VirtualDiskType"`	      	
 }
 
 type GetServerDetailsRequest struct {
@@ -53,6 +72,11 @@ type SetEnqueueServerStop struct {
 	ServerId      int        `json:"ServerId,omitempty"`
 }
 
+type SetPurchaseIpAddress struct {
+	Username      string        `json:"Username,omitempty"`
+	Password      string        `json:"Password,omitempty"`
+}
+
 type GetServersRequest struct {
 	Username      string        `json:"Username"`
 	Password      string        `json:"Password"`
@@ -67,6 +91,11 @@ type GetPreconfiguredPackagesRequest struct {
 	Username      string        `json:"Username"`
 	Password      string        `json:"Password"`
 	HypervisorType int 			`json:"HypervisorType"`
+}
+
+type GetPurchasedIpAddresses struct {
+	Username      string        `json:"Username"`
+	Password      string        `json:"Password"`
 }
 
 func NewAPI(endpoint, username, password string) (api *API, err error) {
@@ -120,13 +149,40 @@ func (a *API) GetPreconfiguredPackage(packagename string) (cloudpackage *models.
 		fmt.Errorf("No package found with Name: %s found on datacenter: %s", packagename, a.client.EndPoint)
 }
 
-func (a *API) GetTemplate(templatename string) (template *models.Template, err error) {
+func (a *API) GetPurchasedIpAddresses() (packagesTypes []*models.IPAddress, err error) {
+	var getpackageRequest = GetPurchasedIpAddresses{}
+	getpackageRequest.Username = a.client.Username
+	getpackageRequest.Password = a.client.Password
+	err = a.client.Post("/GetPurchasedIpAddresses", getpackageRequest, &packagesTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	return packagesTypes, nil
+}
+
+func (a *API) GetPurchasedIpAddress(ip string) (IpAddress *models.IPAddress, err error) {
+	IPAddresses, err := a.GetPurchasedIpAddresses()
+	if err != nil {
+		return nil, err
+	}
+	for _, IpAddress := range IPAddresses {
+				if IpAddress.Value == ip{
+					return IpAddress, nil
+				}
+	}
+
+	return nil,
+		fmt.Errorf("No package found with Name: %s found on datacenter: %s", ip, a.client.EndPoint)
+}
+
+func (a *API) GetTemplate(templatename string, hypervisorType int) (template *models.Template, err error) {
 	templates, err := a.GetTemplates()
 	if err != nil {
 		return nil, err
 	}
 	for _, hv := range templates {
-		if hv.HypervisorType == 4 {
+		if hv.HypervisorType == hypervisorType {
 			for _, template := range hv.Templates {
 				if template.Name == templatename  && template.TemplateSellingStatus == 1 /*OnSale*/ {
 					return &template, nil
@@ -167,7 +223,7 @@ func (a *API) GetServer(serverId int) (server *models.Server, err error) {
 	return server, nil
 }
 
-func (a *API) CreateServer(name, admin_password string, package_id, os_template_id int, sshKey string) (server *models.Server, err error) {
+func (a *API) CreateServerSmart(name, admin_password string, package_id, os_template_id int, sshKey string) (server *models.Server, err error) {
 	var createRequest SetEnqueueServerCreation
 	createRequest.Username = a.client.Username
 	createRequest.Password = a.client.Password
@@ -181,6 +237,50 @@ func (a *API) CreateServer(name, admin_password string, package_id, os_template_
 	} else {
 		createRequest.Server.SshPasswordAuthAllowed = true
 	}
+
+	log.Debug("Post CreateServer Request.")
+	err = a.client.Post("/SetEnqueueServerCreation", createRequest, &server)
+	if err != nil {
+		return nil, err
+	}
+
+	return server, nil
+}
+
+func (a *API) CreateServerPro(name, admin_password string, os_template_id int, sshKey string, ipID int, diskSize int, cpuQuantity int, ramQuantity int) (server *models.Server, err error) {
+	var createRequest SetEnqueueServerCreation
+	createRequest.Username = a.client.Username
+	createRequest.Password = a.client.Password
+	createRequest.Server.Name = name
+	createRequest.Server.OSTemplateId = os_template_id
+	createRequest.Server.SshKey = sshKey
+	createRequest.Server.NetworkAdaptersConfiguration = make([]NetworkAdapterConfiguration,0)	
+	na := NetworkAdapterConfiguration{
+	}
+	na.NetworkAdapterType = 0
+	na.PublicIpAddresses = make([]PublicIpAddressDetails,0)
+	publicIp := PublicIpAddressDetails{
+		PrimaryIPAddress : true,
+		PublicIpAddressResourceId : ipID,
+	}
+	na.PublicIpAddresses = append(na.PublicIpAddresses, publicIp)
+	createRequest.Server.NetworkAdaptersConfiguration = append(createRequest.Server.NetworkAdaptersConfiguration, na)
+	
+
+	if len(admin_password) > 0 {
+		createRequest.Server.AdministratorPassword = admin_password
+		createRequest.Server.SshPasswordAuthAllowed = true
+	} else {
+		createRequest.Server.SshPasswordAuthAllowed = true
+	}
+	createRequest.Server.VirtualDisks = make([]VirtualDiskDetails, 0)
+	vd := VirtualDiskDetails{
+		Size : diskSize,
+		VirtualDiskType : 0,
+	}
+	createRequest.Server.VirtualDisks = append(createRequest.Server.VirtualDisks, vd)
+	createRequest.Server.CPUQuantity = cpuQuantity
+	createRequest.Server.RAMQuantity = ramQuantity
 
 	log.Debug("Post CreateServer Request.")
 	err = a.client.Post("/SetEnqueueServerCreation", createRequest, &server)
@@ -217,6 +317,19 @@ func (a *API) StartServer(server_id int) (err error) {
 	}
 
 	return nil
+}
+
+func (a *API) PurchaseIpAddress() (ip *models.IPAddress, err error) {
+	var startServer SetPurchaseIpAddress
+	startServer.Username = a.client.Username
+	startServer.Password = a.client.Password
+
+	err = a.client.Post("/SetPurchaseIpAddress", startServer, &ip)
+	if err != nil {
+		return nil, err
+	}
+
+	return ip, nil
 }
 
 func (a *API) StopServer(server_id int) (err error) {
