@@ -72,6 +72,12 @@ type SetEnqueueServerStop struct {
 	ServerId      int        `json:"ServerId,omitempty"`
 }
 
+type SetEnqueueServerKill struct {
+	Username      string        `json:"Username,omitempty"`
+	Password      string        `json:"Password,omitempty"`
+	ServerId      int        `json:"ServerId,omitempty"`
+}
+
 type SetPurchaseIpAddress struct {
 	Username      string        `json:"Username,omitempty"`
 	Password      string        `json:"Password,omitempty"`
@@ -339,6 +345,20 @@ func (a *API) StopServer(server_id int) (err error) {
 	stopServer.ServerId = server_id
 
 	err = a.client.Post("/SetEnqueueServerStop", stopServer, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *API) KillServer(server_id int) (err error) {
+	var stopServer SetEnqueueServerKill
+	stopServer.Username = a.client.Username
+	stopServer.Password = a.client.Password
+	stopServer.ServerId = server_id
+
+	err = a.client.Post("/SetEnqueueServerPowerOff", stopServer, nil)
 	if err != nil {
 		return err
 	}
