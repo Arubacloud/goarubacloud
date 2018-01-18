@@ -24,6 +24,7 @@ const (
 	dc4 = "https://api.dc4.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 	dc5 = "https://api.dc5.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 	dc6 = "https://api.dc6.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
+	dc8 = "https://api.dc8.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 )
 
 // Custom errors
@@ -38,6 +39,7 @@ var Endpoints = map[string]string {
 	"dc4": dc4,
 	"dc5": dc5,
 	"dc6": dc6,
+	"dc8": dc8,
 }
 
 type ResponseBody struct {
@@ -192,16 +194,19 @@ func (c *Client) CallAPI(method, path string, reqBody, resType interface{}) erro
 		req.Header.Add("Content-Type", "application/json;charset=utf-8")
 	}
 	req.Header.Add("Accept", "application/json")
+	req.Close = true
 
 	// Send the request with requested timeout
 	c.Client.Timeout = c.Timeout
 	response, err := c.Client.Do(req)
 
-	log.Debugf("[goarubacloud.client.CallAPI] Status: %s", response.Status)
-	//log.Debugf("[goarubacloud.client.CallAPI] response: %#v", response)
 	if err != nil {
+		log.Debugf("[goarubacloud.client.CallAPI] Error: %s", err)	
 		return err
 	}
+
+	log.Debugf("[goarubacloud.client.CallAPI] Status: %s", response.Status)
+	//log.Debugf("[goarubacloud.client.CallAPI] response: %#v", response)
 
 	// Unmarshal the result into the resType if possible
 	return c.getResponse(response, resType)
