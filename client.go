@@ -24,6 +24,7 @@ const (
 	dc4 = "https://api.dc4.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 	dc5 = "https://api.dc5.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 	dc6 = "https://api.dc6.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
+	dc7 = "https://api.dc8.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 	dc8 = "https://api.dc8.computing.cloud.it/WsEndUser/v2.9/WsEndUser.svc/json"
 )
 
@@ -39,6 +40,7 @@ var Endpoints = map[string]string {
 	"dc4": dc4,
 	"dc5": dc5,
 	"dc6": dc6,
+	"dc7": dc7,
 	"dc8": dc8,
 }
 
